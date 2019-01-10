@@ -1,0 +1,20 @@
+#+Title: Crypto Engineering TP — Generic second preimage attacks on long messages for narrow-pipe Merkle-Damg ̊ard hash functions
+#+Author: Barrois. F, Duverney. T
+#+Date: [2018-11-13]
+#+OPTIONS: H:3 toc:nil
+
+
+#+LaTeX_HEADER: \usepackage{tikz}
+#+LaTeX_HEADER: \usepackage{svg}
+#+LaTeX_HEADER: \usemintedstyle{lovelace}
+#+LaTeX_HEADER: \usepackage[all]{tcolorbox}
+#+LaTeX_HEADER: \usepackage{etoolbox}
+#+LaTeX_HEADER: \BeforeBeginEnvironment{minted}{\begin{tcolorbox}[enhanced, colback=white, boxrule=0.1pt,sharp corners, drop fuzzy shadow southeast=black!15!white]}%
+#+LaTeX_HEADER: \AfterEndEnvironment{minted}{\end{tcolorbox}}%
+#+LaTeX_HEADER: \BeforeBeginEnvironment{verbatim}{\begin{tcolorbox}[enhanced, boxrule=0.1pt,sharp corners, drop fuzzy shadow southeast=black!15!white]}%
+#+LaTeX_HEADER: \AfterEndEnvironment{verbatim}{\end{tcolorbox}}%
+
+* Part one: Preparatory work
+
+
+* Part two: The attack
