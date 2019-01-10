@@ -1,4 +1,4 @@
-#+Title: Crypto Engineering TP — Generic second preimage attacks on long messages for narrow-pipe Merkle-Damg ̊ard hash functions
+#+Title: Crypto Engineering TP — Generic second preimage attacks on long messages for narrow-pipe Merkle-Damgard hash functions
 #+Author: Barrois. F, Duverney. T
 #+Date: [2018-11-13]
 #+OPTIONS: H:3 toc:nil
