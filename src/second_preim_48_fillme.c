@@ -119,14 +119,14 @@ int test_sp48(void){
 
   speck48_96(key,plain,cipher_init);
 
-
-
+  printf("Cipher to obtain:\n %lu %lu \n",cipher[0],cipher[1]);
+  printf("Cipher obtained :\n %lu %lu \n",cipher_init[0],cipher_init[1]);
 }
 
 
 int main()
 {
   //	attack();
-  test_sp48(void);
+  test_sp48();
 	return 0;
 }
