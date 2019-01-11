@@ -3,13 +3,17 @@
 #include <stdint.h>
 #include <math.h>
 
+// Circular shift of 8 bits to the right
 #define ROTL24_16(x) ((((x) << 16) ^ ((x) >> 8)) & 0xFFFFFF)
+// Circular shift of 3 bits to the right
 #define ROTL24_3(x) ((((x) << 3) ^ ((x) >> 21)) & 0xFFFFFF)
 
+// Circular shift of 8 bits to the left
 #define ROTL24_8(x) ((((x) << 8) ^ ((x) >> 16)) & 0xFFFFFF)
+// Circular shift of 3 bits to the left
 #define ROTL24_21(x) ((((x) << 21) ^ ((x) >> 3)) & 0xFFFFFF)
 
-#define IV 0x010203040506ULL 
+#define IV 0x010203040506ULL
 
 void speck48_96(const uint32_t k[4], const uint32_t p[2], uint32_t c[2])
 {
@@ -33,7 +37,9 @@ void speck48_96(const uint32_t k[4], const uint32_t p[2], uint32_t c[2])
 
 	for (unsigned i = 0; i < 23; i++)
 	{
-		/* FILL ME */
+    c[1] = (ROTL24_16(c[1]) + c[0]) % 0x01000000;
+    c[1] = c[1] ^ rk[i];
+    c[0] = ROTL24_21(c[0]) ^ c[1];
 	}
 
 	return;
@@ -104,9 +110,23 @@ void attack(void)
 	/* FILL ME */
 }
 
+int test_sp48(void){
+
+  uint32_t key[4] = {0x1a1918,0x121110,0x0a0908,0x020100};
+  uint32_t plain[2] = {0x6d2073, 0x696874};
+  uint32_t cipher[2] = {0x735e10, 0xb6445d};
+  uint32_t cipher_init[2] = {0};
+
+  speck48_96(key,plain,cipher_init);
+
+
+
+}
+
+
 int main()
 {
-	attack();
-
+  //	attack();
+  test_sp48(void);
 	return 0;
 }
