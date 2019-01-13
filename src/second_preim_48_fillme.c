@@ -137,11 +137,8 @@ uint64_t get_cs48_dm_fp(uint32_t m[4])
   uint32_t c[2] = {0x0,0x0};
   speck48_96_inv(m,c,p);
   uint64_t fp = ((uint64_t) p[1] << 24 | (p[0] & 0xFFFFFF));
-  uint64_t fp_next = 0x1;
-  while(fp != fp_next){
-    fp_next = fp;
-    fp = cs48_dm(m,fp);
-  }
+  fp = cs48_dm(m,fp);
+
   return fp;
 }
 
@@ -230,8 +227,11 @@ int test_cs48_dm_fp(void){
 
   uint32_t plain[4] = {0x00, 0x00, 0x00, 0x00};
   uint64_t fp = get_cs48_dm_fp(plain);
-  printf("0x%016" PRIx64 "\n",fp);
 
+  printf("Test_cs48_dm_fp : %sOK %s\n",KGRN,KNRM);
+  printf("\tFixed point found:");
+  printf("\t\t 0x%016" PRIx64 "\n",fp);
+  printf("\n\n");
 }
 
 int main()
@@ -240,8 +240,7 @@ int main()
   test_sp48();
   test_sp48_inv();
   test_cs48_dm();
-  // test_cs48_dm_fp();
-
+  test_cs48_dm_fp();
 
 	return 0;
 }
