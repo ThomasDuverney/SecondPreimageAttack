@@ -2,18 +2,24 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
+#include <inttypes.h>
 
 // Circular shift of 8 bits to the right
 #define ROTL24_16(x) ((((x) << 16) ^ ((x) >> 8)) & 0xFFFFFF)
-// Circular shift of 3 bits to the right
+// Circular shift of 3 bits to the left
 #define ROTL24_3(x) ((((x) << 3) ^ ((x) >> 21)) & 0xFFFFFF)
 
 // Circular shift of 8 bits to the left
 #define ROTL24_8(x) ((((x) << 8) ^ ((x) >> 16)) & 0xFFFFFF)
-// Circular shift of 3 bits to the left
+// Circular shift of 3 bits to the right
 #define ROTL24_21(x) ((((x) << 21) ^ ((x) >> 3)) & 0xFFFFFF)
 
 #define IV 0x010203040506ULL
+
+// printf in color
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KNRM  "\x1B[0m"
 
 void speck48_96(const uint32_t k[4], const uint32_t p[2], uint32_t c[2])
 {
@@ -37,9 +43,9 @@ void speck48_96(const uint32_t k[4], const uint32_t p[2], uint32_t c[2])
 
 	for (unsigned i = 0; i < 23; i++)
 	{
-    c[1] = (ROTL24_16(c[1]) + c[0]) % 0x01000000;
+    c[1] = (ROTL24_16(c[1]) + c[0]) & 0xFFFFFF;
     c[1] = c[1] ^ rk[i];
-    c[0] = ROTL24_21(c[0]) ^ c[1];
+    c[0] = ROTL24_3(c[0]) ^ c[1];
 	}
 
 	return;
@@ -48,7 +54,33 @@ void speck48_96(const uint32_t k[4], const uint32_t p[2], uint32_t c[2])
 /* the inverse cipher */
 void speck48_96_inv(const uint32_t k[4], const uint32_t c[2], uint32_t p[2])
 {
-	/* FILL ME */
+	uint32_t rk[23];
+	uint32_t ell[3] = {k[1], k[2], k[3]};
+
+	rk[0] = k[0];
+
+	p[0] = c[0];
+	p[1] = c[1];
+
+	/* full key schedule */
+	for (unsigned i = 0; i < 22; i++)
+	{
+		uint32_t new_ell = ((ROTL24_16(ell[0]) + rk[i]) ^ i) & 0xFFFFFF;
+		rk[i+1] = ROTL24_3(rk[i]) ^ new_ell;
+		ell[0] = ell[1];
+		ell[1] = ell[2];
+		ell[2] = new_ell;
+	}
+
+  for (signed i = 22; i >= 0 ; i--)
+  {
+    p[0] = p[0] ^ p[1];
+    p[1] = p[1] ^ rk[i];
+    p[0] = ROTL24_21(p[0]);
+    p[1] = (p[1] + 0x01000000 - p[0] )& 0xFFFFFF ;
+    p[1] = ROTL24_8(p[1]) ;
+  }
+
 }
 
 /* The Davies-Meyer compression function based on speck48_96,
@@ -58,7 +90,14 @@ void speck48_96_inv(const uint32_t k[4], const uint32_t c[2], uint32_t p[2])
  */
 uint64_t cs48_dm(const uint32_t m[4], const uint64_t h)
 {
-	/* FILL ME */
+
+  uint32_t p[2] = {h & 0xFFFFFF,(h >> 24) & 0xFFFFFF};
+  uint32_t c[2] = {0};
+
+  speck48_96(m,p,c);
+
+  return ((uint64_t) c[0] << 24 | (c[1] & 0xFFFFFF)) ^ h;
+
 }
 
 /* assumes message length is fourlen * four blocks of 24 bits store over 32
@@ -94,7 +133,16 @@ uint64_t hs48(const uint32_t *m, uint64_t fourlen, int padding, int verbose)
 /* Computes the unique fixed-point for cs48_dm for the message m */
 uint64_t get_cs48_dm_fp(uint32_t m[4])
 {
-	/* FILL ME */
+  uint32_t p[2] = {0};
+  uint32_t c[2] = {0x0,0x0};
+  speck48_96_inv(m,c,p);
+  uint64_t fp = ((uint64_t) p[1] << 24 | (p[0] & 0xFFFFFF));
+  uint64_t fp_next = 0x1;
+  while(fp != fp_next){
+    fp_next = fp;
+    fp = cs48_dm(m,fp);
+  }
+  return fp;
 }
 
 /* Finds a two-block expandable message for hs48, using a fixed-point
@@ -112,21 +160,88 @@ void attack(void)
 
 int test_sp48(void){
 
-  uint32_t key[4] = {0x1a1918,0x121110,0x0a0908,0x020100};
-  uint32_t plain[2] = {0x6d2073, 0x696874};
-  uint32_t cipher[2] = {0x735e10, 0xb6445d};
-  uint32_t cipher_init[2] = {0};
+  uint32_t key[4] = {0x020100, 0x0a0908, 0x121110, 0x1a1918};
+  uint32_t p[2] = {0x696874, 0x6d2073};
+  uint32_t c_exp[2] = {0xb6445d,0x735e10};
+  uint32_t c[2] = {0};
+  uint32_t plain_init[2] = {0};
 
-  speck48_96(key,plain,cipher_init);
+  speck48_96(key,p,c);
 
-  printf("Cipher to obtain:\n %lu %lu \n",cipher[0],cipher[1]);
-  printf("Cipher obtained :\n %lu %lu \n",cipher_init[0],cipher_init[1]);
+  if(c_exp[0] == c[0] && c_exp[1] == c[1] ){
+    printf("Test_sp46 : %sOK %s\n",KGRN,KNRM);
+  }else{
+    printf("Test_sp46: %sERROR %s\n",KRED,KNRM);
+  }
+
+  printf("\tCipher expected:");
+  printf("\t\t 0x%08" PRIx32 " 0x%08" PRIx32"\n",c_exp[0],c_exp[1]);
+  printf("\tCipher found:");
+  printf("\t\t\t 0x%08" PRIx32 " 0x%08" PRIx32"\n",c[0],c[1]);
+  printf("\n\n");
 }
 
+int test_sp48_inv(){
+
+  uint32_t key[4] = {0x020100, 0x0a0908, 0x121110, 0x1a1918};
+  uint32_t p_exp[2] = {0x696874, 0x6d2073};
+  uint32_t c[2] = {0xb6445d,0x735e10};
+
+  uint32_t p[2] = {0};
+
+  speck48_96_inv(key,c,p);
+
+  if(p_exp[0] == p[0] && p_exp[1] == p[1] ){
+    printf("Test_sp46_inv : %sOK %s\n",KGRN,KNRM);
+  }else{
+    printf("Test_sp46_inv : %sERROR %s\n",KRED,KNRM);
+  }
+
+  printf("\tPlaintext expected:");
+  printf("\t\t 0x%08" PRIx32 " 0x%08" PRIx32"\n",p_exp[0],p_exp[1]);
+  printf("\tPlaintext found:");
+  printf("\t\t 0x%08" PRIx32 " 0x%08" PRIx32"\n",p[0],p[1]);
+  printf("\n\n");
+
+}
+
+void test_cs48_dm(void){
+
+  uint64_t h_exp = 0x7FDD5A6EB248ULL;
+  uint32_t plain[4] = {0x00, 0x00, 0x00, 0x00};
+  uint64_t h = 0x0;
+  h = cs48_dm(plain,h);
+
+  if(h_exp == h){
+    printf("Test_cs48_dm : %sOK %s\n",KGRN,KNRM);
+  }else{
+    printf("Test_cs48_dm : %sERROR %s\n",KRED,KNRM);
+  }
+
+  printf("\tHash expected:");
+  printf("\t\t 0x%016" PRIx64 "\n",h_exp);
+  printf("\tHash found:");
+  printf("\t\t 0x%016" PRIx64 "\n",h);
+  printf("\n\n");
+
+}
+
+int test_cs48_dm_fp(void){
+
+  uint32_t plain[4] = {0x00, 0x00, 0x00, 0x00};
+  uint64_t fp = get_cs48_dm_fp(plain);
+  printf("0x%016" PRIx64 "\n",fp);
+
+}
 
 int main()
 {
   //	attack();
   test_sp48();
+  test_sp48_inv();
+  test_cs48_dm();
+  // test_cs48_dm_fp();
+
+
 	return 0;
 }
