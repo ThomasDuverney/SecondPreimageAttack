@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <math.h>
 #include <inttypes.h>
+#define JUDYERROR_SAMPLE 1
+##include <Judy.h>
+##include "xoshiro256starstar.h"
 
 // Circular shift of 8 bits to the right
 #define ROTL24_16(x) ((((x) << 16) ^ ((x) >> 8)) & 0xFFFFFF)
@@ -133,6 +136,7 @@ uint64_t hs48(const uint32_t *m, uint64_t fourlen, int padding, int verbose)
 /* Computes the unique fixed-point for cs48_dm for the message m */
 uint64_t get_cs48_dm_fp(uint32_t m[4])
 {
+  // We could put any value for the plaintext
   uint32_t p[2] = {0};
   uint32_t c[2] = {0x0,0x0};
   speck48_96_inv(m,c,p);
@@ -147,7 +151,8 @@ uint64_t get_cs48_dm_fp(uint32_t m[4])
  * where hs48_nopad is hs48 with no padding */
 void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 {
-	/* FILL ME */
+  uint64_t m =  xoshiro256starstar_random();
+  uint64_t h = cs48_dm(m,IV);
 }
 
 void attack(void)
@@ -161,7 +166,6 @@ int test_sp48(void){
   uint32_t p[2] = {0x696874, 0x6d2073};
   uint32_t c_exp[2] = {0xb6445d,0x735e10};
   uint32_t c[2] = {0};
-  uint32_t plain_init[2] = {0};
 
   speck48_96(key,p,c);
 
@@ -241,6 +245,6 @@ int main()
   test_sp48_inv();
   test_cs48_dm();
   test_cs48_dm_fp();
-
+  find_exp_mess(NULL,NULL);
 	return 0;
 }
