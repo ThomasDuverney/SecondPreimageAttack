@@ -3,9 +3,8 @@
 #include <stdint.h>
 #include <math.h>
 #include <inttypes.h>
-#define JUDYERROR_SAMPLE 1
-##include <Judy.h>
-##include "xoshiro256starstar.h"
+#include "uthash.h"
+#include "xoshiro256starstar.h"
 
 // Circular shift of 8 bits to the right
 #define ROTL24_16(x) ((((x) << 16) ^ ((x) >> 8)) & 0xFFFFFF)
@@ -24,9 +23,9 @@
 #define KGRN  "\x1B[32m"
 #define KNRM  "\x1B[0m"
 
-#ifndef HASHSIZE 
-#define HASHSIZE (1 << 8)     // hash table size 256 
-#endif 
+#ifndef HASHSIZE
+#define HASHSIZE (1 << 8)     // hash table size 256
+#endif
 
 void speck48_96(const uint32_t k[4], const uint32_t p[2], uint32_t c[2])
 {
@@ -156,12 +155,12 @@ uint64_t get_cs48_dm_fp(uint32_t m[4])
 void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 {
   uint64_t m =  xoshiro256starstar_random();
-  uint64_t h = cs48_dm(m,IV);
-	
+  uint64_t h = cs48_dm(m1,IV);
+
 /******* PSEUDO CODE ****************
   int N = 100;	//Choose a value large enough to get good chances to find a collision
   int i, j, match = 0;
-  Pvoid_t htable[HASHSIZE] = { NULL }; 
+  Pvoid_t htable[HASHSIZE] = { NULL };
   uint64_t fp, h = IV;
   uint64_t rand_m;
   for (i = 0; i < N; i++)
@@ -171,14 +170,14 @@ void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 	{
 		h = cs48_dm(m, h)
 		htable.store(m, h);
-	}	
+	}
   }
-	
+
   while (!match) // Generate random messages fixed-points until finding a collision with some htable element
   {
 	  rand_m =  xoshiro256starstar_random(); // to be changed. rand_m should be uint32_t rand_m[4]
 	  fp = get_cs48_dm_fp(rand_m);
-	  if htablesearch(fp) 
+	  if htablesearch(fp)
 	  {
 		  m1 = m;
 		  m2 = rand_m;
