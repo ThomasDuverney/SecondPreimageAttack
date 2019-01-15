@@ -23,10 +23,6 @@
 #define KGRN  "\x1B[32m"
 #define KNRM  "\x1B[0m"
 
-#ifndef HASHSIZE
-#define HASHSIZE (1 << 8)     // hash table size 256
-#endif
-
 void speck48_96(const uint32_t k[4], const uint32_t p[2], uint32_t c[2])
 {
 	uint32_t rk[23];
@@ -154,25 +150,35 @@ uint64_t get_cs48_dm_fp(uint32_t m[4])
  * where hs48_nopad is hs48 with no padding */
 void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 {
-  uint64_t m =  xoshiro256starstar_random();
-  uint64_t h = cs48_dm(m1,IV);
-
-/******* PSEUDO CODE ****************
-  int N = 100;	//Choose a value large enough to get good chances to find a collision
+	struct table_struct{
+		uint64_t id;
+		uint64_t msg;
+		UT_hash_handle hh;
+	}
+	
+	struct table_struct *htable_m1 = NULL;
+	
+	struct table_struct *htable_m2 = NULL;
+	
+  int N = 4096;	// 2^12
   int i, j, match = 0;
   Pvoid_t htable[HASHSIZE] = { NULL };
   uint64_t fp, h = IV;
   uint64_t rand_m;
   for (i = 0; i < N; i++)
   {
-	uint64_t m =  xoshiro256starstar_random();
-	for (j = 0; j < N; j++)
-	{
-		h = cs48_dm(m, h)
-		htable.store(m, h);
-	}
+		uint64_t m =  xoshiro256starstar_random();
+		h = cs48_dm((uint32_t)m, IV);
+		
+		struct table_struct *ts = malloc(sizeof(struct table_struct));
+		ts->id = h;
+		ts->msg = m;
+		
+		HASH_ADD(htable, h, m);
   }
 
+	
+	
   while (!match) // Generate random messages fixed-points until finding a collision with some htable element
   {
 	  rand_m =  xoshiro256starstar_random(); // to be changed. rand_m should be uint32_t rand_m[4]
@@ -183,7 +189,6 @@ void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 		  m2 = rand_m;
 	  }
   }
-  **********************************/
 }
 
 void attack(void)
