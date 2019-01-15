@@ -211,16 +211,17 @@ void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
     randomMsgHash();
   }
 
-  struct table_struct *it, *ts = NULL;
+  struct table_struct *ts = NULL;
   struct table_struct *ts_search = malloc(sizeof(struct table_struct));
 
+  i = 0;
   while(i < N && ts == NULL){
     randomMsgFixedPoint(ts_search);
-    uint64_t q = ts->id;
+    uint64_t q = ts_search->id;
     HASH_FIND_INT(htable,&q,ts);
   }
 
-  if(it != NULL)
+  if(ts != NULL)
   {
     printf(" \t\t 0x%016" PRIx64 " 0x%016" PRIx64" ",ts_search->id,ts->id);
     printf(" \t\t 0x%08" PRIx32 " 0x%08" PRIx32"\n",ts_search->m[1],ts->m[1]);
