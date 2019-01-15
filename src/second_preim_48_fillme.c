@@ -23,10 +23,6 @@
 #define KGRN  "\x1B[32m"
 #define KNRM  "\x1B[0m"
 
-#ifndef HASHSIZE
-#define HASHSIZE (1 << 8)     // hash table size 256
-#endif
-
 void speck48_96(const uint32_t k[4], const uint32_t p[2], uint32_t c[2])
 {
 	uint32_t rk[23];
@@ -149,36 +145,81 @@ uint64_t get_cs48_dm_fp(uint32_t m[4])
   return fp;
 }
 
+	struct table_struct{
+		uint64_t id;
+		uint32_t m[4];
+		UT_hash_handle hh;
+	};
+
+void generateRandomMsg(struct table_struct *ts){
+
+		uint64_t ma =  xoshiro256starstar_random();
+    uint64_t mb =  xoshiro256starstar_random();
+    uint32_t m[4] = {ma & 0xFFFFFFFF,(ma >> 32) & 0xFFFFFFFF,
+                     mb & 0xFFFFFFFF,(mb >> 32) & 0xFFFFFFFF};
+
+    for (int i = 0; i < 4; ++i)
+      {
+        ts->m[i]= m[i];
+      }
+}
+
+void randomMsgHash(struct table_struct *htable){
+
+  struct table_struct  *ts = malloc(sizeof(struct table_struct));
+  struct table_struct * ts_search = NULL;
+
+  do{
+
+    generateRandomMsg(ts);
+    uint64_t h_id = cs48_dm(ts->m, IV);
+    ts->id = h_id;
+
+    HASH_FIND_INT(htable,&h_id,ts_search);
+  }while(ts_search != NULL);
+
+  HASH_ADD_INT(htable,id,ts);
+}
+
+void randomMsgFixedPoint(struct table_struct *htable){
+  struct table_struct  *ts = malloc(sizeof(struct table_struct));
+  struct table_struct * ts_search = NULL;
+
+  do{
+
+    generateRandomMsg(ts);
+    uint64_t fp_id = get_cs48_dm_fp(ts->m);
+    ts->id = fp_id;
+
+    HASH_FIND_INT(htable,&fp_id,ts_search);
+  }while(ts_search != NULL);
+
+  HASH_ADD_INT(htable,id,ts);
+
+}
+
 /* Finds a two-block expandable message for hs48, using a fixed-point
  * That is, computes m1, m2 s.t. hs48_nopad(m1||m2) = hs48_nopad(m1||m2^*),
  * where hs48_nopad is hs48 with no padding */
 void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 {
 
-  struct my_struct {
-    uint64_t id;            /* we'll use this field as the key */
-    uint64_t msg;
-    UT_hash_handle hh; /* makes this structure hashable */
-  };
+	struct table_struct *htable_m1 = NULL;
+	struct table_struct *htable_m2 = NULL;
 
-  uint64_t m =  xoshiro256starstar_random();
-  uint64_t h = cs48_dm(m1,IV);
+  int N = 4096;	// 2^12
 
-/******* PSEUDO CODE ****************
-  int N = 100;	//Choose a value large enough to get good chances to find a collision
   int i, j, match = 0;
-  Pvoid_t htable[HASHSIZE] = { NULL };
   uint64_t fp, h = IV;
   uint64_t rand_m;
+
   for (i = 0; i < N; i++)
   {
-	uint64_t m =  xoshiro256starstar_random();
-	for (j = 0; j < N; j++)
-	{
-		h = cs48_dm(m, h)
-		htable.store(m, h);
-	}
+    randomMsgHash(htable_m1);
+    randomMsgFixedPoint(htable_m2);
   }
+
+
 
   while (!match) // Generate random messages fixed-points until finding a collision with some htable element
   {
@@ -190,7 +231,6 @@ void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 		  m2 = rand_m;
 	  }
   }
-  **********************************/
 }
 
 void attack(void)
