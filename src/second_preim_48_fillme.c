@@ -162,9 +162,10 @@ void generateRandomMsg(struct table_struct *ts){
     /*                  mb & 0xFFFFFFFF,(mb >> 32) & 0xFFFFFFFF}; */
 
 
-    /* uint32_t m[4] = {ma & 0xFFFFFF,(ma >> 32) & 0xFFFFFF, */
-    /*                  mb & 0xFFFFFF,(mb >> 32) & 0xFFFFFF}; */
-    uint32_t m[4] = {0x01,0x02,0x03,0x04};
+    uint32_t m[4] = {ma & 0xFFFFFF,(ma >> 32) & 0xFFFFFF,
+                     mb & 0xFFFFFF,(mb >> 32) & 0xFFFFFF};
+
+    //    uint32_t m[4] = {0x0,0x01,0x02,0x03};
     for (int i = 0; i < 4;i++)
       {
         ts->m[i]= m[i];
@@ -202,8 +203,7 @@ void randomMsgFixedPoint(struct table_struct *ts){
 void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 {
 
-  /* int N = 16777216;	// 2^12 */
-  int N =1;
+  int N =  16777216;	// 2  int N =1;
   int i, j;
 
   for (i = 0; i < N; i++)
@@ -211,21 +211,24 @@ void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
     randomMsgHash();
   }
 
-  struct table_struct *it, *ts_search = NULL;
-  struct table_struct *ts = malloc(sizeof(struct table_struct));
+  struct table_struct *it, *ts = NULL;
+  struct table_struct *ts_search = malloc(sizeof(struct table_struct));
 
-  for(it=htable; it != NULL && ts_search == NULL; it=it->hh.next)
-  {
-    randomMsgFixedPoint(ts);
-    HASH_FIND_INT(htable,&(ts->id),ts_search);
+  while(i < N && ts == NULL){
+    randomMsgFixedPoint(ts_search);
+    uint64_t q = ts->id;
+    HASH_FIND_INT(htable,&q,ts);
   }
 
   if(it != NULL)
   {
+    printf(" \t\t 0x%016" PRIx64 " 0x%016" PRIx64" ",ts_search->id,ts->id);
+    printf(" \t\t 0x%08" PRIx32 " 0x%08" PRIx32"\n",ts_search->m[1],ts->m[1]);
+
     for (j = 0; j < 4; j++)
     {
-        m1[j] = it->m[j];
-        m2[j] = ts_search->m[j];
+        m1[j] = ts_search->m[j];
+        m2[j] = ts->m[j];
     }
   }else{
     printf("No collision found !! \n");
@@ -306,7 +309,7 @@ void test_cs48_dm(void){
 
 int test_cs48_dm_fp(void){
   //uint32_t plain[4] = {0x07202ab0,0x00007fb9,0x00000000,0x00000000};
-  uint32_t plain[4] = {0x01111111, 0x02222222, 0x03333333,0x04444444};
+  uint32_t plain[4] = {0x0, 0x0, 0x0,0x0};
   uint64_t fp = get_cs48_dm_fp(plain);
   uint64_t fp_cipher  = cs48_dm(plain,fp);
 
@@ -321,6 +324,7 @@ int test_cs48_dm_fp(void){
   printf("\tHash computed with fixed point :");
   printf("\t\t 0x%016" PRIx64 "\n",fp_cipher);
   printf("\n\n");
+
 }
 
 void test_em(void){
@@ -328,6 +332,17 @@ void test_em(void){
   uint32_t m2[4] = {0};
   find_exp_mess(m1,m2);
 
+  uint32_t * m = malloc(sizeof(uint32_t)*8);
+  m[0] = m1[0];
+  m[1] = m1[1];
+  m[2] = m1[2];
+  m[3] = m1[3];
+  m[4] = m2[0];
+  m[5] = m2[1];
+  m[6] = m2[2];
+  m[7] = m2[3];
+
+  uint64_t h = hs48(m,2,0,0);
   uint64_t h1 = cs48_dm(m1,IV);
   uint64_t h2 = get_cs48_dm_fp(m2);
   uint64_t h3 = cs48_dm(m2,IV);
@@ -335,12 +350,13 @@ void test_em(void){
   printf("Message m1: \t0x%08" PRIx32 " 0x%08" PRIx32" 0x%08"
           PRIx32" 0x%08" PRIx32"\n",m1[0],m1[1],m1[2],m1[3]);
 
-  printf("Message m1: \t0x%08" PRIx32 " 0x%08" PRIx32" 0x%08"
+  printf("Message m2: \t0x%08" PRIx32 " 0x%08" PRIx32" 0x%08"
          PRIx32" 0x%08"PRIx32"\n",m2[0],m2[1],m2[2],m2[3]);
 
   printf("Hash of m1:\t \t0x%016" PRIx64 "\n",h1);
   printf("Fixed point of m2: \t0x%016" PRIx64 "\n",h2);
   printf("Hash of m2:\t \t0x%016" PRIx64 "\n",h3);
+  printf("Hash of m2:\t \t0x%016" PRIx64 "\n",h);
 }
 
 int main()
