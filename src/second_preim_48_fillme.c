@@ -135,12 +135,13 @@ uint64_t hs48(const uint32_t *m, uint64_t fourlen, int padding, int verbose)
 /* Computes the unique fixed-point for cs48_dm for the message m */
 uint64_t get_cs48_dm_fp(uint32_t m[4])
 {
-  // We could put any value for the plaintext
+
   uint32_t p[2] = {0};
   uint32_t c[2] = {0x0,0x0};
   speck48_96_inv(m,c,p);
   uint64_t fp = ((uint64_t) p[1] << 24 | (p[0] & 0xFFFFFF));
-  fp = cs48_dm(m,fp);
+
+  //  fp = cs48_dm(m,fp);
 
   return fp;
 }
@@ -151,85 +152,83 @@ uint64_t get_cs48_dm_fp(uint32_t m[4])
 		UT_hash_handle hh;
 	};
 
+	struct table_struct *htable = NULL;
+
 void generateRandomMsg(struct table_struct *ts){
 
 		uint64_t ma =  xoshiro256starstar_random();
     uint64_t mb =  xoshiro256starstar_random();
-    uint32_t m[4] = {ma & 0xFFFFFFFF,(ma >> 32) & 0xFFFFFFFF,
-                     mb & 0xFFFFFFFF,(mb >> 32) & 0xFFFFFFFF};
+    /* uint32_t m[4] = {ma & 0xFFFFFFFF,(ma >> 32) & 0xFFFFFFFF, */
+    /*                  mb & 0xFFFFFFFF,(mb >> 32) & 0xFFFFFFFF}; */
 
-    for (int i = 0; i < 4; ++i)
+
+    /* uint32_t m[4] = {ma & 0xFFFFFF,(ma >> 32) & 0xFFFFFF, */
+    /*                  mb & 0xFFFFFF,(mb >> 32) & 0xFFFFFF}; */
+    uint32_t m[4] = {0x01,0x02,0x03,0x04};
+    for (int i = 0; i < 4;i++)
       {
         ts->m[i]= m[i];
       }
 }
 
-void randomMsgHash(struct table_struct *htable){
+void randomMsgHash(/* struct table_struct *htable */){
 
   struct table_struct  *ts = malloc(sizeof(struct table_struct));
   struct table_struct * ts_search = NULL;
-
+  uint64_t h_id;
   do{
 
     generateRandomMsg(ts);
-    uint64_t h_id = cs48_dm(ts->m, IV);
+    h_id = cs48_dm(ts->m, IV);
     ts->id = h_id;
 
     HASH_FIND_INT(htable,&h_id,ts_search);
+
   }while(ts_search != NULL);
 
   HASH_ADD_INT(htable,id,ts);
 }
 
-void randomMsgFixedPoint(struct table_struct *htable){
-  struct table_struct  *ts = malloc(sizeof(struct table_struct));
-  struct table_struct * ts_search = NULL;
-
-  do{
-
+void randomMsgFixedPoint(struct table_struct *ts){
     generateRandomMsg(ts);
     uint64_t fp_id = get_cs48_dm_fp(ts->m);
     ts->id = fp_id;
-
-    HASH_FIND_INT(htable,&fp_id,ts_search);
-  }while(ts_search != NULL);
-
-  HASH_ADD_INT(htable,id,ts);
-
 }
 
 /* Finds a two-block expandable message for hs48, using a fixed-point
  * That is, computes m1, m2 s.t. hs48_nopad(m1||m2) = hs48_nopad(m1||m2^*),
  * where hs48_nopad is hs48 with no padding */
+
 void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 {
 
-	struct table_struct *htable_m1 = NULL;
-	struct table_struct *htable_m2 = NULL;
-
-  int N = 4096;	// 2^12
-
-  int i, j, match = 0;
-  uint64_t fp, h = IV;
-  uint64_t rand_m;
+  /* int N = 16777216;	// 2^12 */
+  int N =1;
+  int i, j;
 
   for (i = 0; i < N; i++)
   {
-    randomMsgHash(htable_m1);
-    randomMsgFixedPoint(htable_m2);
+    randomMsgHash();
   }
 
+  struct table_struct *it, *ts_search = NULL;
+  struct table_struct *ts = malloc(sizeof(struct table_struct));
 
-
-  while (!match) // Generate random messages fixed-points until finding a collision with some htable element
+  for(it=htable; it != NULL && ts_search == NULL; it=it->hh.next)
   {
-	  rand_m =  xoshiro256starstar_random(); // to be changed. rand_m should be uint32_t rand_m[4]
-	  fp = get_cs48_dm_fp(rand_m);
-	  if htablesearch(fp)
-	  {
-		  m1 = m;
-		  m2 = rand_m;
-	  }
+    randomMsgFixedPoint(ts);
+    HASH_FIND_INT(htable,&(ts->id),ts_search);
+  }
+
+  if(it != NULL)
+  {
+    for (j = 0; j < 4; j++)
+    {
+        m1[j] = it->m[j];
+        m2[j] = ts_search->m[j];
+    }
+  }else{
+    printf("No collision found !! \n");
   }
 }
 
@@ -306,14 +305,42 @@ void test_cs48_dm(void){
 }
 
 int test_cs48_dm_fp(void){
-
-  uint32_t plain[4] = {0x00, 0x00, 0x00, 0x00};
+  //uint32_t plain[4] = {0x07202ab0,0x00007fb9,0x00000000,0x00000000};
+  uint32_t plain[4] = {0x01111111, 0x02222222, 0x03333333,0x04444444};
   uint64_t fp = get_cs48_dm_fp(plain);
+  uint64_t fp_cipher  = cs48_dm(plain,fp);
 
-  printf("Test_cs48_dm_fp : %sOK %s\n",KGRN,KNRM);
+  if(fp == fp_cipher){
+    printf("Test_cs48_dm_fp : %sOK %s\n",KGRN,KNRM);
+  }else{
+    printf("Test_cs48_dm_fp : %sERROR %s\n",KRED,KNRM);
+  }
+
   printf("\tFixed point found:");
-  printf("\t\t 0x%016" PRIx64 "\n",fp);
+  printf("\t\t\t\t 0x%016" PRIx64 "\n",fp);
+  printf("\tHash computed with fixed point :");
+  printf("\t\t 0x%016" PRIx64 "\n",fp_cipher);
   printf("\n\n");
+}
+
+void test_em(void){
+  uint32_t m1[4] = {0};
+  uint32_t m2[4] = {0};
+  find_exp_mess(m1,m2);
+
+  uint64_t h1 = cs48_dm(m1,IV);
+  uint64_t h2 = get_cs48_dm_fp(m2);
+  uint64_t h3 = cs48_dm(m2,IV);
+
+  printf("Message m1: \t0x%08" PRIx32 " 0x%08" PRIx32" 0x%08"
+          PRIx32" 0x%08" PRIx32"\n",m1[0],m1[1],m1[2],m1[3]);
+
+  printf("Message m1: \t0x%08" PRIx32 " 0x%08" PRIx32" 0x%08"
+         PRIx32" 0x%08"PRIx32"\n",m2[0],m2[1],m2[2],m2[3]);
+
+  printf("Hash of m1:\t \t0x%016" PRIx64 "\n",h1);
+  printf("Fixed point of m2: \t0x%016" PRIx64 "\n",h2);
+  printf("Hash of m2:\t \t0x%016" PRIx64 "\n",h3);
 }
 
 int main()
@@ -323,6 +350,7 @@ int main()
   test_sp48_inv();
   test_cs48_dm();
   test_cs48_dm_fp();
-  find_exp_mess(NULL,NULL);
+  test_em();
+
 	return 0;
 }
