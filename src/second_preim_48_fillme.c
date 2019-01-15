@@ -158,9 +158,6 @@ void generateRandomMsg(struct table_struct *ts){
 
 		uint64_t ma =  xoshiro256starstar_random();
     uint64_t mb =  xoshiro256starstar_random();
-    /* uint32_t m[4] = {ma & 0xFFFFFFFF,(ma >> 32) & 0xFFFFFFFF, */
-    /*                  mb & 0xFFFFFFFF,(mb >> 32) & 0xFFFFFFFF}; */
-
 
     uint32_t m[4] = {ma & 0xFFFFFF,(ma >> 32) & 0xFFFFFF,
                      mb & 0xFFFFFF,(mb >> 32) & 0xFFFFFF};
@@ -203,7 +200,7 @@ void randomMsgFixedPoint(struct table_struct *ts){
 void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 {
 
-  int N =  16777216;	// 2  int N =1;
+  int N = 16777216;	// 2  int N =1;
   int i, j;
 
   for (i = 0; i < N; i++)
@@ -211,25 +208,30 @@ void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
     randomMsgHash();
   }
 
-  struct table_struct *ts = NULL;
-  struct table_struct *ts_search = malloc(sizeof(struct table_struct));
+  struct table_struct *ts_m1;
+  struct table_struct *ts_m2 = malloc(sizeof(struct table_struct));
 
   i = 0;
-  while(i < N && ts == NULL){
-    randomMsgFixedPoint(ts_search);
-    uint64_t q = ts_search->id;
-    HASH_FIND_INT(htable,&q,ts);
+  while(i < N ){
+    randomMsgFixedPoint(ts_m2);
+    uint64_t q = ts_m2->id;
+    HASH_FIND_INT(htable,&q,ts_m1);
+    //    HASH_FIND(hh, records, &l.key, sizeof(record_key_t), p);
+    if(ts_m1 != NULL){
+      printf("\t0x%016" PRIx64 "0x%016" PRIx64 "\n",ts_m1->id,ts_m2->id);
+      ts_m1 = NULL;
+    }
+
+    i++;
   }
 
-  if(ts != NULL)
+  if(ts_m1 != NULL)
   {
-    printf(" \t\t 0x%016" PRIx64 " 0x%016" PRIx64" ",ts_search->id,ts->id);
-    printf(" \t\t 0x%08" PRIx32 " 0x%08" PRIx32"\n",ts_search->m[1],ts->m[1]);
-
+    printf(" \t\t 0x%016" PRIx64 " 0x%016" PRIx64"\n",ts_m1->id,ts_m2->id);
     for (j = 0; j < 4; j++)
     {
-        m1[j] = ts_search->m[j];
-        m2[j] = ts->m[j];
+        m1[j] = ts_m1->m[j];
+        m2[j] = ts_m2->m[j];
     }
   }else{
     printf("No collision found !! \n");
@@ -238,7 +240,36 @@ void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 
 void attack(void)
 {
-	/* FILL ME */
+	struct table_struct{
+		uint64_t id;
+		int m;
+		UT_hash_handle hh;
+	};
+
+	struct table_struct *h = NULL;
+  struct table_struct *s;
+
+  int N = 15;
+  uint64_t rand = xoshiro256starstar_random();
+  rand = rand && 0xFFFFFF;
+  for (int i = 0; i < N; i++)
+    {
+      s = (struct table_struct*)malloc(sizeof(struct table_struct));
+      if(i == 3)
+        s->id = rand;
+
+      s->m = i;
+      HASH_ADD_INT( h, id, s);
+    }
+
+  struct table_struct *p;
+  uint64_t j = rand;
+  printf("0x%016" PRIx64 "\n",j);
+  HASH_FIND_INT(h, &j, p);
+  if(p != NULL)
+    printf("%i",p->m);
+  else
+    printf("pouet");
 }
 
 int test_sp48(void){
@@ -357,17 +388,17 @@ void test_em(void){
   printf("Hash of m1:\t \t0x%016" PRIx64 "\n",h1);
   printf("Fixed point of m2: \t0x%016" PRIx64 "\n",h2);
   printf("Hash of m2:\t \t0x%016" PRIx64 "\n",h3);
-  printf("Hash of m2:\t \t0x%016" PRIx64 "\n",h);
+  printf("Hash of m1|m2|...|ml:\t \t0x%016" PRIx64 "\n",h);
 }
 
 int main()
 {
-  //	attack();
-  test_sp48();
-  test_sp48_inv();
-  test_cs48_dm();
-  test_cs48_dm_fp();
-  test_em();
+  //  attack();
+  /* test_sp48(); */
+  /* test_sp48_inv(); */
+  /* test_cs48_dm(); */
+  /* test_cs48_dm_fp(); */
+   test_em();
 
 	return 0;
 }
