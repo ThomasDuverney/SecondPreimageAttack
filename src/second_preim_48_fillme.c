@@ -154,6 +154,13 @@ uint64_t get_cs48_dm_fp(uint32_t m[4])
  * where hs48_nopad is hs48 with no padding */
 void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
 {
+
+  struct my_struct {
+    uint64_t id;            /* we'll use this field as the key */
+    uint64_t msg;
+    UT_hash_handle hh; /* makes this structure hashable */
+  };
+
   uint64_t m =  xoshiro256starstar_random();
   uint64_t h = cs48_dm(m1,IV);
 
