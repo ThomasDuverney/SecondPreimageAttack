@@ -26,8 +26,8 @@ For this function, we based our implementation on the following representation:
 [[speck48_96.png]]
 
 As the function takes as input a 48-bit message and a key of 96 bits, the values \alpha and \beta are respectively set to 8 and 3.
-So S^-\alpha performs a circular shift of 8 bits to the right, thus it can be done using ROTL24_16() since this function shifts a value of 16 bits to the left, which is the same as shifting it of 8 bits to the right over 24bits.
-Similarly, S^\beta proceeds to a circular shift of 3 bits to the left and is implemented via a call to ROTL24_3().
+So S^{-\alpha} performs a circular shift of 8 bits to the right, thus it can be done using ROTL24_16() since this function shifts a value of 16 bits to the left, which is the same as shifting it of 8 bits to the right over 24bits.
+Similarly, S^{\beta} proceeds to a circular shift of 3 bits to the left and is implemented via a call to ROTL24_3().
 
 Besides, the only difficulty here lies in the order of the operations. According to the picture above, we firstly do the shift on p[1], then we perform the modular addition with p[0]. Afterwards, we xor p[1] to the key value associated to the current iteration, and finally p[0] is updated by the circular shift and the obtained value is xored to p[1].
 
