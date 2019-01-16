@@ -3,6 +3,9 @@
 #+Date: [2018-11-13]
 #+OPTIONS: H:3 toc:nil
 
+#+LaTeX_HEADER: \usepackage{amsmath}
+#+LaTeX_HEADER: \usepackage{amssymb}
+#+LaTeX_HEADER: \usepackage{amsthm}
 
 #+LaTeX_HEADER: \usepackage{tikz}
 #+LaTeX_HEADER: \usepackage{svg}
@@ -23,7 +26,7 @@ For this function, we based our implementation on the following representation:
 
 #+CAPTION: SPECK round function
 #+NAME: fig.speck
-[[speck48_96.png]]
+[[file:./speck48_96.png]]
 
 As the function takes as input a 48-bit message and a key of 96 bits, the values \alpha and \beta are respectively set to 8 and 3.
 So S^{-\alpha} performs a circular shift of 8 bits to the right, thus it can be done using ROTL24_16() since this function shifts a value of 16 bits to the left, which is the same as shifting it of 8 bits to the right over 24bits.
