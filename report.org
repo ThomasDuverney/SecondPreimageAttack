@@ -18,9 +18,11 @@
 #+LaTeX_HEADER: \AfterEndEnvironment{verbatim}{\end{tcolorbox}}%
 
 *Pratical infos :* 
-To compile, just use the Makefile: make.
-The traces show the good functioning of all the questions except the very last one.
-The call to the function attack was commented for you to see quickly the response to the previous questions. To run the attack, just uncomment the call in the main function.
+
+To compile, just use the Makefile: make.\\
+The traces show the good functioning of all the questions except the very last one.\\
+The call to the function attack was commented for you to see quickly the response to the previous questions. \\
+To run the attack, just uncomment the call in the main function.\\
 Some possible second preimages have been computed and are displayed in test_second_preim_results().
 
 
@@ -78,7 +80,18 @@ For this function, we have opted for a hash table as a data structure, taken fro
 The function find_exp_mess() firstly fills a hash table with random messages and their associated hash. Next, we generate random messages until the fixed point of one them matches a hash present in the table. We return the random message and the one in the table whose hash was collided.
 
 
-
-
-
 ** Question 2
+
+In the function attack(), we fill our hash table with the intermediate hashes got from the given message mess made of 2^18 blocks. Then we find the fixed point, given by m2, of an expandable message and randomly look for a message block m3 such that the hash of m1||m2||m3 is one of the chaining values in the hash table. Finally, we reconstruct a full preimage mess2 that will be the concatenation of m1, the appropriate number of blocks m2 (found via a counter), m3 and the remaining blocks of the original message located after the collided value.
+
+*Analysis :*
+
+In order to estimate the number of messages to iterate to find a preimage, we considerate the number of all possibilities and the size of the actual message used in the algorithm:
+$2^{48} / 2^{18} = 2^{30}$
+
+In average, 2^{30} values should be tested before finding a second preimage.
+
+In practice, we usually find one after about 500 000 000 iterations, which is comprised between 2^{29} and 2^{30}. 2^{30} values should allow to find a solution with probability close to 1, so 2^{29} iterations give a success rate of 0.5. So the algorithm is exactly in the average and behaves as expected. Besides, for such number of tested messages, our algorithm lasts about 5 minutes, which corresponds to a rate of 1 666 667 values tested per second. Moreover, the worst case we could have observed gave a solution after 12 minutes. So our attack seems to be quite efficient.
+
+
+
