@@ -141,7 +141,7 @@ uint64_t get_cs48_dm_fp(uint32_t m[4])
   speck48_96_inv(m,c,p);
   uint64_t fp = ((uint64_t) p[1] << 24 | (p[0] & 0xFFFFFF));
 
-  //  fp = cs48_dm(m,fp);
+  fp = cs48_dm(m,fp);
 
   return fp;
 }
@@ -159,14 +159,14 @@ void generateRandomMsg(struct table_struct *ts){
 		uint64_t ma =  xoshiro256starstar_random();
     uint64_t mb =  xoshiro256starstar_random();
 
-    uint32_t m[4] = {ma & 0xFFFFFF,(ma >> 32) & 0xFFFFFF,
-                     mb & 0xFFFFFF,(mb >> 32) & 0xFFFFFF};
+    uint32_t m[4] = {ma & 0xFFFFFF,ma >> 24 & 0xFFFFFF,
+                     mb & 0xFFFFFF,mb >> 24 & 0xFFFFFF};
 
-    //    uint32_t m[4] = {0x0,0x01,0x02,0x03};
     for (int i = 0; i < 4;i++)
       {
         ts->m[i]= m[i];
       }
+
 }
 
 void randomMsgHash(/* struct table_struct *htable */){
@@ -180,11 +180,13 @@ void randomMsgHash(/* struct table_struct *htable */){
     h_id = cs48_dm(ts->m, IV);
     ts->id = h_id;
 
-    HASH_FIND_INT(htable,&h_id,ts_search);
-
+    //HASH_FIND_INT(htable,&h_id,ts_search);
+    HASH_FIND(hh,htable,&h_id,sizeof(uint64_t),ts_search);
   }while(ts_search != NULL);
 
-  HASH_ADD_INT(htable,id,ts);
+  //HASH_ADD_INT(htable,id,ts);
+  HASH_ADD(hh, htable, id, sizeof(uint64_t), ts);
+
 }
 
 void randomMsgFixedPoint(struct table_struct *ts){
@@ -208,26 +210,20 @@ void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
     randomMsgHash();
   }
 
-  struct table_struct *ts_m1;
+  struct table_struct *ts_m1 = NULL;
   struct table_struct *ts_m2 = malloc(sizeof(struct table_struct));
-
   i = 0;
-  while(i < N ){
+  while(ts_m1 == NULL){
     randomMsgFixedPoint(ts_m2);
     uint64_t q = ts_m2->id;
-    HASH_FIND_INT(htable,&q,ts_m1);
-    //    HASH_FIND(hh, records, &l.key, sizeof(record_key_t), p);
-    if(ts_m1 != NULL){
-      printf("\t0x%016" PRIx64 "0x%016" PRIx64 "\n",ts_m1->id,ts_m2->id);
-      ts_m1 = NULL;
-    }
-
+    //HASH_FIND_INT(htable,&q,ts_m1);
+    HASH_FIND(hh,htable,&q,sizeof(uint64_t),ts_m1);
+    //    printf(" \t\t 0x%016" PRIx64 "\n",ts_m2->id);
     i++;
   }
 
   if(ts_m1 != NULL)
   {
-    printf(" \t\t 0x%016" PRIx64 " 0x%016" PRIx64"\n",ts_m1->id,ts_m2->id);
     for (j = 0; j < 4; j++)
     {
         m1[j] = ts_m1->m[j];
@@ -249,27 +245,41 @@ void attack(void)
 	struct table_struct *h = NULL;
   struct table_struct *s;
 
-  int N = 15;
+  int N = 16777621;
   uint64_t rand = xoshiro256starstar_random();
-  rand = rand && 0xFFFFFF;
-  for (int i = 0; i < N; i++)
+  uint64_t rand_1;
+  int i;
+  for (i = 0; i < N; i++)
     {
       s = (struct table_struct*)malloc(sizeof(struct table_struct));
+      rand_1 = xoshiro256starstar_random();
+
       if(i == 3)
-        s->id = rand;
+        s->id = (uint64_t) rand & 0xFFFFFFFFFFFF;
+      else
+        s->id = (uint64_t) rand_1 & 0xFFFFFFFFFFFF;
 
       s->m = i;
       HASH_ADD_INT( h, id, s);
+      //HASH_ADD(hh, h, id, sizeof(uint64_t), s);
     }
 
-  struct table_struct *p;
-  uint64_t j = rand;
+  struct table_struct *p,*t;
+  uint64_t j = rand & 0xFFFFFFFFFFFF;
   printf("0x%016" PRIx64 "\n",j);
   HASH_FIND_INT(h, &j, p);
-  if(p != NULL)
-    printf("%i",p->m);
-  else
+  //HASH_FIND(hh,h,&j,sizeof(uint64_t),t);
+  if(p != NULL){
+    printf("p 0x%016" PRIx64 "\n",p->id);
+  }else{
     printf("pouet");
+  }
+
+  if(t != NULL){
+    printf("0x%016" PRIx64 "\n",t->id);
+  }else{
+    printf("lol");
+  }
 }
 
 int test_sp48(void){
@@ -393,12 +403,12 @@ void test_em(void){
 
 int main()
 {
-  //  attack();
+  // attack();
   /* test_sp48(); */
   /* test_sp48_inv(); */
   /* test_cs48_dm(); */
   /* test_cs48_dm_fp(); */
-   test_em();
+  test_em();
 
 	return 0;
 }
