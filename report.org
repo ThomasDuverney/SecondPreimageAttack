@@ -41,5 +41,14 @@ There exists a few differences though:
   *Remark:* Actually, the value is stored in an unsigned integer so the potential negative values due to the modular operation would be arranged to the right range of values, but we left the addition with the modulo value as it would be useful in a general case with a different implementation.
 
 
+** Question 3
+
+The function cs48_dm takes a 64-bit h as input so we need to format it to use our cipher speck48_96.
+We compute both halves of it by applying a 24-bit mask on the least significant part and by shifting of 24 bits and applying the same mask to the most significant part (here the mask is a security measure for the case where the two most significant bytes of h are non-zero). Then we call our cipher and reformat the result in one 64-bit variable before xoring it with h, according to the Davies-Meyer function: 
+\begin{equation} 
+\epsilon(m, h) XOR h
+\end{equation}
+
+
 
 * Part two: The attack
