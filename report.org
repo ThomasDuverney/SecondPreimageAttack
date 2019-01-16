@@ -17,6 +17,13 @@
 #+LaTeX_HEADER: \BeforeBeginEnvironment{verbatim}{\begin{tcolorbox}[enhanced, boxrule=0.1pt,sharp corners, drop fuzzy shadow southeast=black!15!white]}%
 #+LaTeX_HEADER: \AfterEndEnvironment{verbatim}{\end{tcolorbox}}%
 
+*Pratical infos :* 
+To compile, just use the Makefile: make.
+The traces show the good functioning of all the questions except the very last one.
+The call to the function attack was commented for you to see quickly the response to the previous questions. To run the attack, just uncomment the call in the main function.
+Some results have been computed
+
+
 * Part one: Preparatory work
 
 ** Question 1
