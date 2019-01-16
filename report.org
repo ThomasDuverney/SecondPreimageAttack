@@ -26,7 +26,8 @@ For this function, we based our implementation on the following representation:
 
 #+CAPTION: SPECK round function
 #+NAME: fig.speck
-[[file:./speck48_96.png]]
+#+ATTR_LATEX: :width 0.8\textwidth
+[[file:./images/speck48_96.png]]
 
 As the function takes as input a 48-bit message and a key of 96 bits, the values \alpha and \beta are respectively set to 8 and 3.
 So S^{-\alpha} performs a circular shift of 8 bits to the right, thus it can be done using ROTL24_16() since this function shifts a value of 16 bits to the left, which is the same as shifting it of 8 bits to the right over 24bits.
@@ -47,7 +48,7 @@ There exists a few differences though:
 ** Question 3
 
 The function cs48_dm takes a 64-bit h as input so we need to format it to use our cipher speck48_96.
-We compute both halves of it by applying a 24-bit mask on the least significant part and by shifting of 24 bits and applying the same mask to the most significant part (here the mask is a security measure for the case where the two most significant bytes of h are non-zero). Then we call our cipher and reformat the result in one 64-bit variable before xoring it with h, according to the Davies-Meyer function:  
+We compute both halves of it by applying a 24-bit mask on the least significant part and by shifting of 24 bits and applying the same mask to the most significant part (here the mask is a security measure for the case where the two most significant bytes of h are non-zero). Then we call our cipher and reformat the result in one 64-bit variable before xoring it with h, according to the Davies-Meyer function:
 $\epsilon(m, h) \oplus h$
 
 
