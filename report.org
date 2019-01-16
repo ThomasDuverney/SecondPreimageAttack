@@ -56,3 +56,18 @@ Consequently we fix h to the value$\epsilon^{-1}(m,0). Then the fixed-point valu
 
 
 * Part two: The attack
+
+** Question 1
+
+For this function, we have opted for a hash table as a data structure, taken from the library uthash. This choice seemed to be a good one since the search operation is perfomed in constant time. We have split its use in many functions:
+  + The function generateRandomMsg() generates a new random message using the provided function xoshiro256starstar_random() twice since we need four 32-bit blocks to compose a message.
+  + The function randomMsgHash() adds a new couple <hash, randomMessage>, using generateRandomMsg(), to a hash table. A check is done to avoid the duplicates.
+  + The function randomMsgFixedPoint() computes the fixed point of a randomly generated message.
+
+The function find_exp_mess() firstly fills a hash table with random messages and their associated hash. Next, we generate random messages until the fixed point of one them matches a hash present in the table. We return the random message and the one in the table whose hash was collided.
+
+
+
+
+
+** Question 2
