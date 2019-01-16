@@ -44,5 +44,33 @@ There exists a few differences though:
   *Remark:* Actually, the value is stored in an unsigned integer so the potential negative values due to the modular operation would be arranged to the right range of values, but we left the addition with the modulo value as it would be useful in a general case with a different implementation.
 
 
+** Question 3
+
+The function cs48_dm takes a 64-bit h as input so we need to format it to use our cipher speck48_96.
+We compute both halves of it by applying a 24-bit mask on the least significant part and by shifting of 24 bits and applying the same mask to the most significant part (here the mask is a security measure for the case where the two most significant bytes of h are non-zero). Then we call our cipher and reformat the result in one 64-bit variable before xoring it with h, according to the Davies-Meyer function:  
+$\epsilon(m, h) \oplus h$
+
+
+** Question 4
+
+Finding a fixed point means that the hash value stays constant starting from a certain rank. Thus it corresponds to finding a solution to the equation $\epsilon(m, h) \oplus h = h$.
+We can simplify it to $\epsilon(m, h) = 0$. So we want to find h such that the ciphering cancels out.
+Consequently we fix h to the value$\epsilon^{-1}(m,0). Then the fixed-point value is set back on 64 bits by applying shifting and masking operation as explained in the previous questions. The last line of the function ciphers once again the fixed-point and was used in order to check the obtained result, but is not useful technically speaking.
+
 
 * Part two: The attack
+
+** Question 1
+
+For this function, we have opted for a hash table as a data structure, taken from the library uthash. This choice seemed to be a good one since the search operation is perfomed in constant time. We have split its use in many functions:
+  + The function generateRandomMsg() generates a new random message using the provided function xoshiro256starstar_random() twice since we need four 32-bit blocks to compose a message.
+  + The function randomMsgHash() adds a new couple <hash, randomMessage>, using generateRandomMsg(), to a hash table. A check is done to avoid the duplicates.
+  + The function randomMsgFixedPoint() computes the fixed point of a randomly generated message.
+
+The function find_exp_mess() firstly fills a hash table with random messages and their associated hash. Next, we generate random messages until the fixed point of one them matches a hash present in the table. We return the random message and the one in the table whose hash was collided.
+
+
+
+
+
+** Question 2
