@@ -16,7 +16,7 @@
 
 * Part one: Preparatory work
 
-Question 1:
+** Question 1
 
 For this function, we based our implementation on the following representation:
 
@@ -30,6 +30,16 @@ So S^{-\alpha} performs a circular shift of 8 bits to the right, thus it can be 
 Similarly, S^{\beta} proceeds to a circular shift of 3 bits to the left and is implemented via a call to ROTL24_3().
 
 Besides, the only difficulty here lies in the order of the operations. According to the picture above, we firstly do the shift on p[1], then we perform the modular addition with p[0]. Afterwards, we xor p[1] to the key value associated to the current iteration, and finally p[0] is updated by the circular shift and the obtained value is xored to p[1].
+
+
+** Question 2
+
+The speck48_96_inv process only consists in performing almost the same operations in the reverse order.
+There exists a few differences though:
+  + Because we want to invert the ciphering process, we need to apply S^{-\beta} on c[0] so we call ROTL24_21() (21 being the complement of 3 to 24), and symmetrically, we use ROTL24_8() for S^{\alpha} on c[1].
+  + As a modular addition is done during the ciphering, in the case where the value of the modulo was reached, computing the substraction from the cipher will not give back then original value. In order to bypass this case, we add the value of the modulo before computing the substraction so that in any case the obtained value for c[1] will be such that 0 <= c[1] < modulo.
+  *Remark:* Actually, the value is stored in an unsigned integer so the potential negative values due to the modular operation would be arranged to the right range of values, but we left the addition with the modulo value as it would be useful in a general case with a different implementation.
+
 
 
 * Part two: The attack
