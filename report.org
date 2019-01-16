@@ -21,7 +21,7 @@
 To compile, just use the Makefile: make.
 The traces show the good functioning of all the questions except the very last one.
 The call to the function attack was commented for you to see quickly the response to the previous questions. To run the attack, just uncomment the call in the main function.
-Some results have been computed
+Some possible second preimages have been computed and are displayed in test_second_preim_results().
 
 
 * Part one: Preparatory work
