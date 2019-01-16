@@ -147,12 +147,15 @@ uint64_t get_cs48_dm_fp(uint32_t m[4])
   return fp;
 }
 
+/* Struct used for the hash table */
+
 	struct table_struct{
 		uint64_t id;
 		uint32_t m[4];
 		UT_hash_handle hh;
 	};
 
+/* Definition of the hash table */
 	struct table_struct *htable = NULL;
 
 void generateRandomMsg(struct table_struct *ts){
@@ -170,7 +173,7 @@ void generateRandomMsg(struct table_struct *ts){
 
 }
 
-void randomMsgHash(/* struct table_struct *htable */){
+void randomMsgHash(){
 
   struct table_struct  *ts = malloc(sizeof(struct table_struct));
   struct table_struct * ts_search = NULL;
@@ -180,12 +183,9 @@ void randomMsgHash(/* struct table_struct *htable */){
     generateRandomMsg(ts);
     h_id = cs48_dm(ts->m, IV);
     ts->id = h_id;
-
-    //HASH_FIND_INT(htable,&h_id,ts_search);
     HASH_FIND(hh,htable,&h_id,sizeof(uint64_t),ts_search);
   }while(ts_search != NULL);
 
-  //HASH_ADD_INT(htable,id,ts);
   HASH_ADD(hh, htable, id, sizeof(uint64_t), ts);
 
 }
