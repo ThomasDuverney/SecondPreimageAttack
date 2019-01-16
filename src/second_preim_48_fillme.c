@@ -93,7 +93,7 @@ void speck48_96_inv(const uint32_t k[4], const uint32_t c[2], uint32_t p[2])
 uint64_t cs48_dm(const uint32_t m[4], const uint64_t h)
 {
 
-  uint32_t p[2] = {h & 0xFFFFFF,(h >> 24) & 0xFFFFFF};
+  uint32_t p[2] = {(h >> 24) & 0xFFFFFF, h & 0xFFFFFF};
   uint32_t c[2] = {0};
 
   speck48_96(m,p,c);
@@ -216,9 +216,7 @@ void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
   while(ts_m1 == NULL){
     randomMsgFixedPoint(ts_m2);
     uint64_t q = ts_m2->id;
-    //HASH_FIND_INT(htable,&q,ts_m1);
     HASH_FIND(hh,htable,&q,sizeof(uint64_t),ts_m1);
-    //    printf(" \t\t 0x%016" PRIx64 "\n",ts_m2->id);
     i++;
   }
 
@@ -234,53 +232,116 @@ void find_exp_mess(uint32_t m1[4], uint32_t m2[4])
   }
 }
 
+struct table_struct *htable_mess = NULL;
+
+
+void construct_mess2(uint32_t * mess,uint64_t mess_length,uint32_t * mess2,
+                     uint32_t num_block,
+                     uint32_t m1[4],uint32_t m2[4],uint32_t m3[4])
+{
+    int i = 0;
+    int nbm2 = num_block - 2;
+    memcpy(mess2,mess,sizeof(uint32_t)*mess_length);
+
+    mess2[i] = m1[0];
+    mess2[i+1] = m1[1];
+    mess2[i+2] = m1[2];
+    mess2[i+3] = m1[3];
+
+    for(i =4; i< nbm2*4;i+=4){
+      mess2[i] = m2[0];
+      mess2[i+1] = m2[1];
+      mess2[i+2] = m2[2];
+      mess2[i+3] = m2[3];
+    }
+    printf("Nb m2: %i\n",i);
+    printf("Nb m2: %i\n",nbm2);
+    mess2[i] = m3[0];
+    mess2[i+1] = m3[1];
+    mess2[i+2] = m3[2];
+    mess2[i+3] = m3[3];
+
+}
+
 void attack(void)
 {
-	struct table_struct{
-		uint64_t id;
-		int m;
-		UT_hash_handle hh;
-	};
-
-	struct table_struct *h = NULL;
-  struct table_struct *s;
-
-  int N = 16777621;
-  uint64_t rand = xoshiro256starstar_random();
-  uint64_t rand_1;
-  int i;
-  for (i = 0; i < N; i++)
+  uint64_t mess_length = (1 << 20);
+  uint32_t * mess = malloc(sizeof(uint32_t)*mess_length);
+  /* m1 and m2 building our expandable message */
+  uint32_t m1[4] = {0};
+  uint32_t m2[4] = {0};
+  /* Fixed point of m2 and hash of m1*/
+  uint64_t fp;
+  uint64_t ib_hash = IV;
+  for (int i = 0; i < (1 << 20); i+=4)
     {
-      s = (struct table_struct*)malloc(sizeof(struct table_struct));
-      rand_1 = xoshiro256starstar_random();
+      /* ib_mess is for in between message of mess */
+      struct table_struct * ib_mess = malloc(sizeof(struct table_struct));
+      ib_mess->m[0] =  mess[i + 0] =i;
+      ib_mess->m[1] = mess[i + 1] =0;
+      ib_mess->m[2] = mess[i + 2] =0;
+      ib_mess->m[3] = mess[i + 3] =0 ;
 
-      if(i == 3)
-        s->id = (uint64_t) rand & 0xFFFFFFFFFFFF;
-      else
-        s->id = (uint64_t) rand_1 & 0xFFFFFFFFFFFF;
-
-      s->m = i;
-      HASH_ADD_INT( h, id, s);
-      //HASH_ADD(hh, h, id, sizeof(uint64_t), s);
+      ib_hash = cs48_dm(ib_mess->m,ib_hash);
+      ib_mess->id = ib_hash;
+      HASH_ADD(hh, htable_mess, id, sizeof(uint64_t), ib_mess);
     }
 
-  struct table_struct *p,*t;
-  uint64_t j = rand & 0xFFFFFFFFFFFF;
-  printf("0x%016" PRIx64 "\n",j);
-  HASH_FIND_INT(h, &j, p);
-  //HASH_FIND(hh,h,&j,sizeof(uint64_t),t);
-  if(p != NULL){
-    printf("p 0x%016" PRIx64 "\n",p->id);
-  }else{
-    printf("pouet");
+  find_exp_mess(m1,m2);
+  fp = get_cs48_dm_fp(m2);
+  struct table_struct *ib_mess = NULL;
+  struct table_struct *m_collid = malloc(sizeof(struct table_struct));
+  int cpt = 0;
+  while(ib_mess == NULL){
+    generateRandomMsg(m_collid);
+    m_collid->id = cs48_dm(m_collid->m,fp);
+    HASH_FIND(hh,htable_mess,&(m_collid->id),sizeof(uint64_t),ib_mess);
+    cpt++;
   }
 
-  if(t != NULL){
-    printf("0x%016" PRIx64 "\n",t->id);
+  printf("Nb messages tested: %i \n",cpt);
+
+  if(ib_mess != NULL)
+  {
+    printf("ib_mess hash: 0x%016" PRIx64 "\n",ib_mess->id);
+    printf("m_collid hash: 0x%016" PRIx64 "\n",m_collid->id);
+
+    printf("ib_mess: \t0x%08" PRIx32 " 0x%08" PRIx32" 0x%08"
+           PRIx32" 0x%08"PRIx32"\n",ib_mess->m[0],
+           ib_mess->m[1],ib_mess->m[2],ib_mess->m[3]);
+
+    printf("m1: \t0x%08" PRIx32 " 0x%08" PRIx32" 0x%08"
+           PRIx32" 0x%08" PRIx32 "\n",m1[0],
+           m1[1],m1[2],m1[3]);
+
+    printf("m2: \t0x%08" PRIx32 " 0x%08" PRIx32" 0x%08"
+           PRIx32" 0x%08" PRIx32 "\n",m2[0],
+           m2[1],m2[2],m2[3]);
+
+    printf("m_collid: \t0x%08" PRIx32 " 0x%08" PRIx32" 0x%08"
+           PRIx32" 0x%08" PRIx32 "\n",m_collid->m[0],
+           m_collid->m[1],m_collid->m[2],m_collid->m[3]);
+
+    uint32_t * mess2 = malloc(sizeof(uint32_t)*mess_length);
+    uint32_t num_block = ib_mess->m[0];
+
+    construct_mess2(mess,mess_length,mess2,num_block,m1,m2,m_collid->m);
+
+    uint64_t h = hs48(mess,mess_length/4,1,0);
+    uint64_t h_mess = 0xFF3FD9D23B89ULL;
+    uint64_t h_mess2 = hs48(mess2,mess_length/4,1,0);
+
+    printf("0x%016" PRIx64 "\n",h);
+    printf("0x%016" PRIx64 "\n",h_mess);
+    printf("0x%016" PRIx64 "\n",h_mess2);
+    printf("collision found !! \n");
+
   }else{
-    printf("lol");
+    printf("No collision found !! \n");
   }
+
 }
+
 
 int test_sp48(void){
 
@@ -374,41 +435,86 @@ void test_em(void){
   uint32_t m2[4] = {0};
   find_exp_mess(m1,m2);
 
-  uint32_t * m = malloc(sizeof(uint32_t)*8);
-  m[0] = m1[0];
-  m[1] = m1[1];
-  m[2] = m1[2];
-  m[3] = m1[3];
-  m[4] = m2[0];
-  m[5] = m2[1];
-  m[6] = m2[2];
-  m[7] = m2[3];
-
-  uint64_t h = hs48(m,2,0,0);
   uint64_t h1 = cs48_dm(m1,IV);
   uint64_t h2 = get_cs48_dm_fp(m2);
-  uint64_t h3 = cs48_dm(m2,IV);
 
-  printf("Message m1: \t0x%08" PRIx32 " 0x%08" PRIx32" 0x%08"
+  if(h1 == h2){
+    printf("Test_em : %sOK %s\n",KGRN,KNRM);
+  }else{
+    printf("Test_em : %sERROR %s\n",KRED,KNRM);
+  }
+
+  printf("\tMessage m1: \t0x%08" PRIx32 " 0x%08" PRIx32" 0x%08"
           PRIx32" 0x%08" PRIx32"\n",m1[0],m1[1],m1[2],m1[3]);
 
-  printf("Message m2: \t0x%08" PRIx32 " 0x%08" PRIx32" 0x%08"
+  printf("\tMessage m2: \t0x%08" PRIx32 " 0x%08" PRIx32" 0x%08"
          PRIx32" 0x%08"PRIx32"\n",m2[0],m2[1],m2[2],m2[3]);
 
-  printf("Hash of m1:\t \t0x%016" PRIx64 "\n",h1);
-  printf("Fixed point of m2: \t0x%016" PRIx64 "\n",h2);
-  printf("Hash of m2:\t \t0x%016" PRIx64 "\n",h3);
-  printf("Hash of m1|m2|...|ml:\t \t0x%016" PRIx64 "\n",h);
+  printf("\n\tHash of m1:\t \t0x%016" PRIx64 "\n",h1);
+  printf("\tFixed point of m2: \t0x%016" PRIx64 "\n",h2);
+
+}
+
+void test_construct_mess2()
+{
+  uint64_t mess_length = (1 << 20);
+  uint32_t * mess = malloc(sizeof(uint32_t)*mess_length);
+  for (int i = 0; i < (1 << 20); i+=4)
+    {
+      /* ib_mess is for in between message of mess */
+      struct table_struct * ib_mess = malloc(sizeof(struct table_struct));
+      mess[i + 0] =i;
+      mess[i + 1] =0;
+      mess[i + 2] =0;
+      mess[i + 3] =0 ;
+    }
+
+  uint32_t m1[4] = {0x00331c22, 0x00e389a8, 0x00127cec, 0x00b34beb};
+  uint32_t m2[4] = {0x0004b0e6, 0x0003aba3, 0x00942997, 0x006ca2ec};
+  uint32_t m3[4] = {0x0016fa13, 0x00408a15, 0x003bef65, 0x009267df};
+
+  uint32_t num_block = 0x0001414c;
+
+  uint32_t * mess2 = malloc(sizeof(uint32_t)*mess_length);
+  construct_mess2(mess,mess_length,mess2,num_block,m1,m2,m3);
+
+  //uint64_t h = hs48(mess,mess_length/4,1,1);
+  uint64_t h_mess2 = hs48(mess2,mess_length/4,1,0);
+
+  //printf("0x%016" PRIx64 "\n",h);
+  printf("0x%016" PRIx64 "\n",h_mess2);
 }
 
 int main()
 {
-  // attack();
-  /* test_sp48(); */
+  attack();
+  //  test_sp48();
   /* test_sp48_inv(); */
-  /* test_cs48_dm(); */
+  //  test_cs48_dm();
   /* test_cs48_dm_fp(); */
-  test_em();
-
+  //  test_em();
+  //test_construct_mess2();
 	return 0;
 }
+
+    /* memcpy(mess2,mess,sizeof(uint32_t)*mess_length); */
+    /* int i = 0; */
+
+    /* mess2[i] = m1[0]; */
+    /* mess2[i+1] = m1[1]; */
+    /* mess2[i+2] = m1[2]; */
+    /* mess2[i+3] = m1[3]; */
+
+    /* int nbm2 = ib_mess->m[0] - 2; */
+
+    /* for(i =4; i< nbm2*4;i+=4){ */
+    /*   mess2[i] = m2[0]; */
+    /*   mess2[i+1] = m2[1]; */
+    /*   mess2[i+2] = m2[2]; */
+    /*   mess2[i+3] = m2[3]; */
+    /* } */
+
+    /* mess2[i] = m_collid->m[0]; */
+    /* mess2[i+1] = m_collid->m[1]; */
+    /* mess2[i+2] = m_collid->m[2]; */
+    /* mess2[i+3] = m_collid->m[3]; */
