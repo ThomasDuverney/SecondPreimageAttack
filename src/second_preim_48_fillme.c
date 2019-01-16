@@ -490,7 +490,7 @@ void test_em(void){
   printf("\n\tHash of m1:\t \t0x%016" PRIx64 "\n",h1);
   printf("\tFixed point of m2: \t0x%016" PRIx64 "\n",h2);
   printf("\tHash of m2: \t\t0x%016" PRIx64 "\n",h3);
-
+  printf("\n\n");
 }
 
 /* Function used to test the computed results in the file secondpreim.txt.
