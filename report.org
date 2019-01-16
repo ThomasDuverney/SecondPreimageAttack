@@ -48,5 +48,11 @@ We compute both halves of it by applying a 24-bit mask on the least significant 
 $\epsilon(m, h) \oplus h$
 
 
+** Question 4
+
+Finding a fixed point means that the hash value stays constant starting from a certain rank. Thus it corresponds to finding a solution to the equation $\epsilon(m, h) \oplus h = h$.
+We can simplify it to $\epsilon(m, h) = 0$. So we want to find h such that the ciphering cancels out.
+Consequently we fix h to the value$\epsilon^{-1}(m,0). Then the fixed-point value is set back on 64 bits by applying shifting and masking operation as explained in the previous questions. The last line of the function ciphers once again the fixed-point and was used in order to check the obtained result, but is not useful technically speaking.
+
 
 * Part two: The attack
